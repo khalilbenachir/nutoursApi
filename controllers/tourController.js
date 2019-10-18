@@ -9,6 +9,8 @@ const cheapProduct = (req, res, next) => {
 
 const getAllTours = async (req, res) => {
   try {
+    console.log(req);
+
     const Feature = new ApiFeatures(Tour.find(), req.query)
       .filter()
       .sort()
@@ -118,7 +120,6 @@ const getToursStats = async (req, res) => {
 
 const createTour = async (req, res) => {
   try {
-    console.log(req.body);
     const nTour = new Tour(req.body);
     const tour = await nTour.save();
     res.status(201).json({

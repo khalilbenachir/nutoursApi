@@ -34,13 +34,15 @@ const userModel = new mongoose.Schema({
   role: {
     type: String,
     required: [true, "A tour must have a role"],
-    trim: true
+    enum: ['user', 'admin', 'lead-guide', 'guide'],
+    default:'user'
   },
   active: {
     type: Boolean,
     default: true
   },
-  photo: String
+  photo: String,
+  passwordChangedAt: Date
 });
 
 userModel.pre("save", async function(next) {
@@ -57,6 +59,14 @@ userModel.methods.correctPassword = async function(
   userpassword
 ) {
   return await bcrypt.compare(candidatePassword, userpassword);
+};
+
+userModel.methods.changedPasswordAfter = function(jwtTimesTamp) {
+  if (this.passwordChangedAt) {
+    const changedTimesTam = parseInt(this.passwordChangedAt.getTime() / 1000);
+    return jwtTimesTamp < changedTimesTam;
+  }
+  return false;
 };
 
 const User = mongoose.model("User", userModel);
