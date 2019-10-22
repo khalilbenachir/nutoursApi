@@ -10,9 +10,23 @@ const signToken = require("../utils/signToken");
 const { promisify } = require("util");
 const jwt = require("jsonwebtoken");
 
-
 const createSendToken = (user, statusCode, res) => {
   const token = signToken(user._id);
+  const cookieOption = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
+    ),
+    httpOnly: true
+  };
+
+  if (process.env.NODE_ENV === "production") cookieOption.secure = true;
+
+
+  res.cookie("jwt", token, cookieOption);
+
+  //remove password from output
+  user.password = undefined;
+
   res.status(statusCode).json({
     status: "success",
     token,
@@ -20,7 +34,7 @@ const createSendToken = (user, statusCode, res) => {
       users: user
     }
   });
-}
+};
 
 exports.signUp = catchAsync(async (req, res) => {
   const user = await User.create(req.body);
@@ -39,8 +53,7 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError("Incorrect Email or password", 401));
   }
 
-  createSendToken(user,200,res)
-
+  createSendToken(user, 200, res);
 });
 
 exports.protect = catchAsync(async (req, res, next) => {
@@ -163,15 +176,15 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   user.passwordExpiredToken = undefined;
   await user.save();
   // 4 log teh user in ,JWT token
-  createSendToken(user,200,res)
+  createSendToken(user, 200, res);
 });
 
 exports.updatePassword = catchAsync(async (req, res, next) => {
   // 1 get user from collection
-  const user = await User.findById(req.user.id).select('+password');
+  const user = await User.findById(req.user.id).select("+password");
   // 2 check if posted password is correct
-  if (! await user.correctPassword(req.body.Currentpassword, user.password)) {
-    return next(new AppError("password is incorrect!", 401))
+  if (!(await user.correctPassword(req.body.Currentpassword, user.password))) {
+    return next(new AppError("password is incorrect!", 401));
   }
   // 3 if so, update password
   user.password = req.body.password;
@@ -179,5 +192,4 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
   await user.save();
   // 4 log user in ,JWT TOKEN
   createSendToken(user, 200, res);
-
-})
+});
