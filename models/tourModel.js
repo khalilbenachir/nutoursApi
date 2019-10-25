@@ -91,9 +91,24 @@ const tourModel = new mongoose.Schema(
   {
     toJSON: {
       virtuals: true
+    },
+    toObject: {
+      virtuals: true
     }
   }
 );
+
+tourModel.virtual("durationWeeks").get(function() {
+  return Math.floor(this.duration / 7);
+});
+
+// VIRTUAL POPULATE
+
+tourModel.virtual("reviews", {
+  ref: "Review",
+  foreignField: "tour",
+  localField: "_id"
+});
 
 tourModel.pre("save", function(next) {
   this.name = slugify(this.name, { lower: true });
@@ -122,10 +137,6 @@ tourModel.pre(/^find/, function(next) {
 tourModel.pre("aggregate", function(next) {
   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
   next();
-});
-
-tourModel.virtual("durationWeeks").get(function() {
-  return Math.floor(this.duration / 7);
 });
 
 const Tour = mongoose.model("Tour", tourModel);

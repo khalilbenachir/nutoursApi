@@ -9,6 +9,7 @@ const xss = require("xss-clean");
 const hpp = require("hpp");
 
 const tourRouter = require("./routes/tours");
+const reviewRouter = require("./routes/review");
 const userRouter = require("./routes/users");
 const globalErrorHandler = require("./controllers/errorController");
 
@@ -51,6 +52,8 @@ app.use(express.static(`${__dirname}/public`));
 
 app.use("/api/v1/tours", tourRouter);
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/reviews", reviewRouter);
+
 
 app.use(globalErrorHandler);
 
