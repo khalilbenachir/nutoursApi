@@ -1,32 +1,34 @@
 const express = require("express");
 const router = express.Router();
 
-const reviewRouter = require('./review');
+const reviewRouter = require("./review");
 
 const tourController = require("../controllers/tourController");
-const authController = require('../controllers/authController');
+const authController = require("../controllers/authController");
 //TOURS ROUTE
 
 router
   .route("/top-5-tours")
   .get(tourController.cheapProduct, tourController.getAllTours);
 
+router.route("/tours-stats").get(tourController.getToursStats);
 
 router
-.route("/tours-stats")
-  .get(tourController.getToursStats);
+  .route("/tour-within/:distance/center/:latlong/unit/:unit")
+  .get(tourController.getTourWithin);
 
-  router
-.route("/monthly-plan/:year")
-.get(tourController.getMonthlyPlan);
+router
+  .route("/distances/center/:latlong/unit/:unit")
+  .get(tourController.getDistances);
+
+router.route("/monthly-plan/:year").get(tourController.getMonthlyPlan);
 router
   .route("/")
-  .get(authController.protect,tourController.getAllTours)
-  .post(tourController.createTour);
+  .get(tourController.getAllTours)
+  .post(authController.protect, tourController.createTour);
 
 router.route("/:id").get(tourController.getTourById);
 
-router.use('/:tourId/reviews', reviewRouter);
+router.use("/:tourId/reviews", reviewRouter);
 
- 
 module.exports = router;

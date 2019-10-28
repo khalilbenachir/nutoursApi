@@ -98,6 +98,9 @@ const tourModel = new mongoose.Schema(
   }
 );
 
+tourModel.index({ price: 1 });
+tourModel.index({ startLocation: "2dsphere" });
+
 tourModel.virtual("durationWeeks").get(function() {
   return Math.floor(this.duration / 7);
 });
@@ -134,10 +137,10 @@ tourModel.pre(/^find/, function(next) {
   next();
 });
 
-tourModel.pre("aggregate", function(next) {
+/* tourModel.pre("aggregate", function(next) {
   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
   next();
-});
+}); */
 
 const Tour = mongoose.model("Tour", tourModel);
 module.exports = Tour;

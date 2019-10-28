@@ -1,5 +1,9 @@
 const Tour = require("../models/tourModel");
 const ApiFeatures = require("../utils/apiFeatures");
+const factory = require("./factoryHandler");
+const catchAsync = require("../utils/catchAsync");
+const AppError = require("../utils/appError");
+
 const cheapProduct = (req, res, next) => {
   req.query.limit = "5";
   req.query.sort = "price,-ratingsAverage";
@@ -7,155 +11,140 @@ const cheapProduct = (req, res, next) => {
   next();
 };
 
-const getAllTours = async (req, res) => {
-  try {
-    console.log(req);
-
-    const Feature = new ApiFeatures(Tour.find(), req.query)
-      .filter()
-      .sort()
-      .limitedFields()
-      .pagination();
-
-    const nTours = await Feature.query;
-
-    res.status(200).json({
-      status: "success",
-      results: nTours.length,
-      data: {
-        nTours
-      }
-    });
-  } catch (error) {
-    res.status(400).json({
-      status: "fail",
-      message: error
-    });
-  }
-};
-
-const getMonthlyPlan = async (req, res) => {
-  try {
-    const year = req.params.year * 1;
-    console.log(year);
-    const plan = await Tour.aggregate([
-      {
-        $unwind: "$startDates"
-      },
-      {
-        $match: {
-          startDates: {
-            $gte: new Date(`${year}-01-01`),
-            $lte: new Date(`${year}-12-30`)
-          }
-        }
-      },
-      {
-        $group: {
-          _id: { $month: "$startDates" },
-          numTourByMonth: { $sum: 1 },
-          tours: { $push: "$name" }
-        }
-      },
-      {
-        $addFields: {
-          month:'$_id'
-        }
-      },
-      {
-        $sort: {
-          numTourByMonth: -1
+const getMonthlyPlan = catchAsync(async (req, res) => {
+  const year = req.params.year * 1;
+  console.log(year);
+  const plan = await Tour.aggregate([
+    {
+      $unwind: "$startDates"
+    },
+    {
+      $match: {
+        startDates: {
+          $gte: new Date(`${year}-01-01`),
+          $lte: new Date(`${year}-12-30`)
         }
       }
-    ]);
-    res.status(200).json({
-      status: "success",
-      data: {
-        plan
+    },
+    {
+      $group: {
+        _id: { $month: "$startDates" },
+        numTourByMonth: { $sum: 1 },
+        tours: { $push: "$name" }
       }
-    });
-  } catch (error) {
-    res.status(400).json({
-      status: "fail",
-      message: error
-    });
-  }
-};
+    },
+    {
+      $addFields: {
+        month: "$_id"
+      }
+    },
+    {
+      $sort: {
+        numTourByMonth: -1
+      }
+    }
+  ]);
+  res.status(200).json({
+    status: "success",
+    data: {
+      plan
+    }
+  });
+});
 
-const getToursStats = async (req, res) => {
-  try {
-    const stats = await Tour.aggregate([
-      {
-        $match: { ratingsAverage: { $gte: 4.5 } }
-      },
-      {
-        $group: {
-          _id: { $toUpper: "$difficulty" },
-          numTours: { $sum: 1 },
-          numRatings: { $sum: "$ratingsAverage" },
-          avgPrice: { $avg: "$price" },
-          minPrice: { $min: "$price" },
-          maxPrice: { $max: "$price" }
-        }
-      },
-      {
-        $sort: {
-          avgPrice: 1
-        }
+const getToursStats = catchAsync(async (req, res) => {
+  const stats = await Tour.aggregate([
+    {
+      $match: { ratingsAverage: { $gte: 4.5 } }
+    },
+    {
+      $group: {
+        _id: { $toUpper: "$difficulty" },
+        numTours: { $sum: 1 },
+        numRatings: { $sum: "$ratingsAverage" },
+        avgPrice: { $avg: "$price" },
+        minPrice: { $min: "$price" },
+        maxPrice: { $max: "$price" }
       }
-    ]);
-    res.status(200).json({
-      status: "success",
-      data: {
-        stats
+    },
+    {
+      $sort: {
+        avgPrice: 1
       }
-    });
-  } catch (error) {
-    res.status(400).json({
-      status: "fail",
-      message: error
-    });
-  }
-};
+    }
+  ]);
+  res.status(200).json({
+    status: "success",
+    data: {
+      stats
+    }
+  });
+});
 
-const createTour = async (req, res) => {
-  try {
-    const nTour = new Tour(req.body);
-    const tour = await nTour.save();
-    res.status(201).json({
-      status: "success",
-      data: {
-        tours: tour
+const getTourWithin = catchAsync(async (req, res, next) => {
+  const { distance, latlong, unit } = req.params;
+
+  const [lat, long] = latlong.split(",");
+
+  const radius = unit === "mi" ? distance / 3963.2 : distance / 6372.1;
+  if (!long || !lat)
+    return next(new AppError("Please provide latitude and longitude ", 400));
+
+  const tours = await Tour.find({
+    startLocation: { $geoWithin: { $centerSphere: [[long, lat], radius] } }
+  });
+
+  console.log(tours);
+
+  res.status(200).json({
+    status: "success",
+    results: tours.length,
+    data: {
+      tours
+    }
+  });
+});
+
+const getDistances = catchAsync(async (req, res, next) => {
+  const { latlong, unit } = req.params;
+
+  const [lat, long] = latlong.split(",");
+
+  if (!long || !lat)
+    return next(new AppError("Please provide latitude and longitude ", 400));
+
+  const distances = await Tour.aggregate([
+    {
+      $geoNear: {
+        near: {
+          type: "Point",
+          coordinates: [long * 1, lat * 1]
+        },
+        distanceField: "distance"
       }
-    });
-  } catch (error) {
-    res.status(400).json({
-      status: "fail",
-      message: error
-    });
-  }
-};
-const getTourById = async (req, res) => {
-  try {
-    const tour = await Tour.findById(req.params.id).populate('reviews');
-    res.status(200).json({
-      status: "success",
-      data: {
-        tour
-      }
-    });
-  } catch (error) {
-    res.status(400).json({
-      status: "fail",
-      message: error
-    });
-  }
-};
+    }
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    results: distances.length,
+    data: {
+      distances
+    }
+  });
+});
+
+const getAllTours = factory.getAll(Tour);
+const createTour = factory.createOne(Tour);
+const getTourById = factory.getModelById(Tour);
+
 module.exports = {
   getAllTours,
   createTour,
   getTourById,
   cheapProduct,
   getMonthlyPlan,
-  getToursStats
+  getToursStats,
+  getTourWithin,
+  getDistances
 };

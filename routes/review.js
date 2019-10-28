@@ -5,13 +5,17 @@ const reviewController = require("../controllers/reviewController");
 const authController = require("../controllers/authController");
 //REVIEW ROUTE
 
+router.use(authController.protect);
+
 router
   .route("/")
   .get(reviewController.getAllReviews)
   .post(
-    authController.protect,
-    authController.restrict("user"),
+    authController.restrict("user","admin"),
+    reviewController.setTourUserId,
     reviewController.createReview
-  );
+);
+  
+router.route('/:id').delete(reviewController.deleteReview);
 
 module.exports = router;

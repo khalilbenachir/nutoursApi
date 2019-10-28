@@ -7,12 +7,17 @@ const authController = require("../controllers/authController");
 const { getAllUsers, getUserById } = userController;
 const { signUp } = authController;
 
-router.post('/login', authController.login);
+router.post("/login", authController.login);
+router.post("/forgotpassword", authController.forgotPassword);
+router.post("/resetpassword/:token", authController.resetPassword);
 
-router.post('/forgotpassword', authController.forgotPassword);
-router.post('/resetpassword/:token', authController.resetPassword);
-router.post('/updatepassword', authController.protect,authController.updatePassword);
+router.use(authController.protect);
 
+
+router.post("/updatepassword", authController.updatePassword);
+router.route("/me").get(userController.getMe, userController.getUserById);
+
+router.use(authController.restrict('admin'));
 
 router
   .route("/")
