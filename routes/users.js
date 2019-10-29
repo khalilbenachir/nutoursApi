@@ -13,11 +13,17 @@ router.post("/resetpassword/:token", authController.resetPassword);
 
 router.use(authController.protect);
 
+router.patch(
+  "/updateMe",
+  userController.uploadUserPhoto,
+  userController.resizeUserPhoto,
+  userController.updateMe
+);
 
 router.post("/updatepassword", authController.updatePassword);
 router.route("/me").get(userController.getMe, userController.getUserById);
 
-router.use(authController.restrict('admin'));
+router.use(authController.restrict("admin"));
 
 router
   .route("/")

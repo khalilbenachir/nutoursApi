@@ -12,6 +12,7 @@ const tourModel = new mongoose.Schema(
       type: Number,
       default: 4.5
     },
+    slug: String,
     ratingsQuantity: {
       type: Number,
       default: 0
@@ -134,6 +135,11 @@ tourModel.pre(/^find/, function(next) {
     path: "guides",
     select: "-__v -passwordChangedAt"
   });
+  next();
+});
+
+tourModel.pre('save', function(next) {
+  this.slug = slugify(this.name, { lower: true });
   next();
 });
 

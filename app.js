@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const app = express();
 const dotenv = require("dotenv");
 const morgan = require("morgan");
@@ -10,10 +11,15 @@ const hpp = require("hpp");
 
 const tourRouter = require("./routes/tours");
 const reviewRouter = require("./routes/review");
+const viewRouter = require("./routes/view");
 const userRouter = require("./routes/users");
 const globalErrorHandler = require("./controllers/errorController");
 
 dotenv.config();
+
+app.use(express.static(path.join(__dirname, "public")));
+app.set("views", path.join(__dirname, "views"));
+app.set("view engine", "pug");
 
 const limiter = rateLimit({
   max: 100,
@@ -48,12 +54,11 @@ app.use(
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
-app.use(express.static(`${__dirname}/public`));
 
+app.use("/", viewRouter);
 app.use("/api/v1/tours", tourRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/reviews", reviewRouter);
-
 
 app.use(globalErrorHandler);
 
